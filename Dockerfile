@@ -11,8 +11,10 @@ RUN apk add --no-cache git
 # Set the working directory
 WORKDIR /src
 
-# Clone the usque repository from GitHub
-RUN git clone https://github.com/d-edge/usque.git .
+# =========================================================================
+#  FIX: The original repository was deleted. Cloning from a community fork.
+# =========================================================================
+RUN git clone https://github.com/eza-community/usque.git .
 
 # Build the usque binary.
 # CGO_ENABLED=0 creates a static binary that can run on any Linux, including Alpine.
