@@ -29,9 +29,7 @@ FROM alpine:latest
 # Set the platform argument, which is needed for downloading the 'warp' tool
 ARG TARGETARCH
 
-# =========================================================================
-#  FIX: Add iptables and ip6tables to provide the missing restore commands
-# =========================================================================
+# Install runtime dependencies, including iptables for wg-quick
 RUN apk add --no-cache \
     curl \
     gawk \
@@ -39,7 +37,10 @@ RUN apk add --no-cache \
     wireguard-tools \
     iptables \
     ip6tables
-# =========================================================================
+
+# Patch wg-quick to prevent it from modifying read-only sysctl values.
+# This avoids the need for --privileged or --sysctl flags during runtime.
+RUN sed -i 's/sysctl -q net.ipv4.conf.all.src_valid_mark=1/#&/' /usr/bin/wg-quick
 
 # Copy the compiled 'usque' binary from the builder stage
 COPY --from=builder /usque /usr/local/bin/usque
