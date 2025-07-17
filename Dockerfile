@@ -1,19 +1,17 @@
 # =========================================================================
 # Stage 1: The Builder
-# Use the official Go image to build the 'usque' binary from source.
+# Use a Debian-based Go image for a more stable build environment.
 # This stage will be discarded after the build is complete.
 # =========================================================================
-FROM golang:1.22-alpine AS builder
+FROM golang:1.22-bullseye AS builder
 
-# Install git, which is required to clone the source code
-RUN apk add --no-cache git
+# Install git using apt-get
+RUN apt-get update && apt-get install -y --no-install-recommends git
 
 # Set the working directory
 WORKDIR /src
 
-# =========================================================================
-#  FIX: The original repository was deleted. Cloning from a community fork.
-# =========================================================================
+# Clone the usque repository from the community fork
 RUN git clone https://github.com/eza-community/usque.git .
 
 # Build the usque binary.
