@@ -11,9 +11,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl tar
 # Set the working directory
 WORKDIR /src
 
-# FIX: Download the source code as a tarball to avoid git clone issues in CI.
-# The tar command extracts the archive and strips the top-level directory.
-RUN curl -L https://github.com/eza-community/usque/archive/refs/heads/master.tar.gz | tar -xz --strip-components=1
+# FIX: Using a more robust, two-step process to download and then extract.
+# The 'curl -fL' command will fail with a clear error if the download fails (e.g., 404 Not Found).
+RUN curl -fL -o usque.tar.gz https://github.com/Diniboy1123/usque/archive/refs/heads/main.tar.gz && \
+    tar -xzf usque.tar.gz --strip-components=1 && \
+    rm usque.tar.gz
 
 # Build the usque binary.
 # CGO_ENABLED=0 creates a static binary that can run on any Linux, including Alpine.
