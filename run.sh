@@ -73,8 +73,8 @@ _startProxyServices() {
     if ! pgrep -f "usque socks" > /dev/null; then
         yellow "Starting Usque SOCKS5 proxy service..."
         local SOCKS5_PORT="${SOCKS5_PORT:-${PORT:-1080}}"
-        # 移除了认证参数
-        local SOCKS_COMMAND="usque socks -l ${HOST_IP}:${SOCKS5_PORT} -b wgcf"
+        # FIX: 使用正确的命令行参数: -b (监听地址), -p (端口), -i (出口网卡)
+        local SOCKS_COMMAND="usque socks -b ${HOST_IP} -p ${SOCKS5_PORT} -i wgcf"
         green "✅ SOCKS5 代理配置: ${HOST_IP}:${SOCKS5_PORT} | 认证: 已禁用"
         eval "${SOCKS_COMMAND} &"
     fi
@@ -83,8 +83,8 @@ _startProxyServices() {
     if [ -n "$HTTP_PORT" ]; then
         if ! pgrep -f "usque http-proxy" > /dev/null; then
             yellow "Starting Usque HTTP proxy service..."
-            # 移除了认证参数
-            local HTTP_COMMAND="usque http-proxy -l ${HOST_IP}:${HTTP_PORT} -b wgcf"
+            # FIX: 使用正确的命令行参数: -b (监听地址), -p (端口), -i (出口网卡)
+            local HTTP_COMMAND="usque http-proxy -b ${HOST_IP} -p ${HTTP_PORT} -i wgcf"
             green "✅ HTTP 代理配置: ${HOST_IP}:${HTTP_PORT} | 认证: 已禁用"
             eval "${HTTP_COMMAND} &"
         fi
