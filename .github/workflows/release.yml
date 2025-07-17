@@ -1,0 +1,96 @@
+# .github/workflows/release.yml
+
+# Workflow name
+name: Build and Release to GHCR
+
+# This workflow is triggered only when a new release is published on GitHub
+on:
+  release:
+    types: [published]
+
+# Set permissions for the workflow to write to packages (GHCR) and contents (release assets)
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Check out the repository code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Set up QEMU for multi-architecture builds
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      # Step 3: Set up Docker Buildx, the advanced builder
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Step 4: Log in to GitHub Container Registry (GHCR)
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Step 5: Extract Docker metadata (tags, labels)
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+
+      # Step 6: Build and push multi-platform image to GHCR
+      # This step builds for all platforms and populates the build cache.
+      - name: Build and Push to GHCR
+        id: build-and-push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Step 7.1: Build and export linux/amd64 image as a tarball
+      - name: Build and Export AMD64 Tarball for Release
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: false
+          # Load from cache to make this step fast
+          cache-from: type=gha
+          # Save the output to a uniquely named tar file
+          outputs: type=docker,dest=./usque-proxy-amd64-${{ github.ref_name }}.tar
+
+      # Step 7.2: Build and export linux/arm64 image as a tarball
+      - name: Build and Export ARM64 Tarball for Release
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/arm64
+          push: false
+          # Load from cache to make this step fast
+          cache-from: type=gha
+          # Save the output to a uniquely named tar file
+          outputs: type=docker,dest=./usque-proxy-arm64-${{ github.ref_name }}.tar
+
+      # Step 8: Upload ALL generated tarballs to the GitHub Release
+      - name: Upload All Tarballs to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          # The 'files' property now lists all tarballs to be uploaded.
+          # Each file should be on a new line.
+          files: |
+            ./usque-proxy-amd64-${{ github.ref_name }}.tar
+            ./usque-proxy-arm64-${{ github.ref_name }}.tar
