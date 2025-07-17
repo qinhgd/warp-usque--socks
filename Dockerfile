@@ -4,7 +4,7 @@ FROM alpine:latest
 # 设置平台架构参数，用于下载正确的二进制文件
 ARG TARGETARCH
 
-# 安装所有运行时所需的依赖
+# 安装所有运行时所需的依赖，包括 unzip
 RUN apk add --no-cache \
     curl \
     gawk \
@@ -12,21 +12,22 @@ RUN apk add --no-cache \
     wireguard-tools \
     iptables \
     ip6tables \
-    tar
+    tar \
+    unzip
 
 # 关键修复：修补 wg-quick 脚本，以避免在 Docker 中因权限问题出错
 RUN sed -i 's/sysctl -q net.ipv4.conf.all.src_valid_mark=1/#&/' /usr/bin/wg-quick
 
 # =========================================================================
-#  安装 Usque (从 v1.4.1 Release 下载预编译版)
+#  安装 Usque (从 v1.4.1 Release 下载预编译的 .zip 文件)
 # =========================================================================
 ARG USQUE_VERSION=v1.4.1
-# FIX: Corrected the asset filename to include the version number and handle the tar.gz archive.
-RUN curl -fL -o usque.tar.gz "https://github.com/Diniboy1123/usque/releases/download/${USQUE_VERSION}/usque-${USQUE_VERSION}-linux-${TARGETARCH}.tar.gz" && \
-    tar -xzf usque.tar.gz && \
+# FIX: 使用正确的文件名格式 (usque_VERSION_linux_ARCH.zip) 并添加解压步骤
+RUN curl -fL -o usque.zip "https://github.com/Diniboy1123/usque/releases/download/v${USQUE_VERSION}/usque_${USQUE_VERSION}_linux_${TARGETARCH}.zip" && \
+    unzip usque.zip && \
     mv usque /usr/local/bin/usque && \
     chmod +x /usr/local/bin/usque && \
-    rm usque.tar.gz
+    rm usque.zip
 
 # =========================================================================
 #  安装其他工具
