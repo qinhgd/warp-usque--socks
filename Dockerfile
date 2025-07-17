@@ -3,7 +3,7 @@
 # Use a Debian-based Go image for a more stable build environment.
 # This stage will be discarded after the build is complete.
 # =========================================================================
-FROM golang:1.22-bullseye AS builder
+FROM golang:1.23-bullseye AS builder
 
 # Install curl and tar to download and extract the source code archive.
 RUN apt-get update && apt-get install -y --no-install-recommends curl tar
