@@ -29,12 +29,17 @@ FROM alpine:latest
 # Set the platform argument, which is needed for downloading the 'warp' tool
 ARG TARGETARCH
 
-# Install only the necessary runtime dependencies for our script
+# =========================================================================
+#  FIX: Add iptables and ip6tables to provide the missing restore commands
+# =========================================================================
 RUN apk add --no-cache \
     curl \
     gawk \
     iproute2 \
-    wireguard-tools
+    wireguard-tools \
+    iptables \
+    ip6tables
+# =========================================================================
 
 # Copy the compiled 'usque' binary from the builder stage
 COPY --from=builder /usque /usr/local/bin/usque
@@ -43,13 +48,10 @@ COPY --from=builder /usque /usr/local/bin/usque
 RUN curl -L -o /usr/local/bin/warp "https://gitlab.com/Misaka-blog/warp-script/-/raw/main/files/warp-yxip/warp-linux-${TARGETARCH}" && \
     chmod +x /usr/local/bin/warp
 
-# =========================================================================
-#  FIX: Install wgcf directly into the image during build
-# =========================================================================
+# Install wgcf directly into the image during build
 ARG WGCF_VERSION=v2.2.19
 RUN curl -fL -o /usr/local/bin/wgcf "https://github.com/ViRb3/wgcf/releases/download/${WGCF_VERSION}/wgcf_${WGCF_VERSION#v}_linux_${TARGETARCH}" && \
     chmod +x /usr/local/bin/wgcf
-# =========================================================================
 
 # Copy our core run script into the final image
 COPY run.sh /usr/local/bin/run.sh
