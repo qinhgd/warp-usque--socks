@@ -21,12 +21,8 @@ RUN sed -i 's/sysctl -q net.ipv4.conf.all.src_valid_mark=1/#&/' /usr/bin/wg-quic
 #  安装 Usque (从 v1.4.1 Release 下载预编译版)
 # =========================================================================
 ARG USQUE_VERSION=v1.4.1
-# FIX: Download the correct .tar.gz archive, extract it, and clean up.
-RUN curl -fL -o usque.tar.gz "https://github.com/Diniboy1123/usque/releases/download/${USQUE_VERSION}/usque-linux-${TARGETARCH}.tar.gz" && \
-    tar -xzf usque.tar.gz && \
-    mv usque /usr/local/bin/usque && \
-    chmod +x /usr/local/bin/usque && \
-    rm usque.tar.gz
+RUN curl -fL -o /usr/local/bin/usque "https://github.com/Diniboy1123/usque/releases/download/${USQUE_VERSION}/usque-linux-${TARGETARCH}" && \
+    chmod +x /usr/local/bin/usque
 
 # =========================================================================
 #  安装其他工具
