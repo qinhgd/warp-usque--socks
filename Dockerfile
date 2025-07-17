@@ -11,22 +11,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl tar
 # Set the working directory
 WORKDIR /src
 
-# FIX: Using a more robust, two-step process to download and then extract.
-# The 'curl -fL' command will fail with a clear error if the download fails (e.g., 404 Not Found).
+# Download the source code as a tarball to avoid git clone issues in CI.
 RUN curl -fL -o usque.tar.gz https://github.com/Diniboy1123/usque/archive/refs/heads/main.tar.gz && \
     tar -xzf usque.tar.gz --strip-components=1 && \
     rm usque.tar.gz
 
 # Build the usque binary.
-# CGO_ENABLED=0 creates a static binary that can run on any Linux, including Alpine.
-# -ldflags="-s -w" strips debug information, making the final binary smaller.
 RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /usque .
 
 
 # =========================================================================
 # Stage 2: The Final Image
-# Use a minimal Alpine image for the final product. This image will not
-# contain any Go build tools, only the final compiled program.
+# Use a minimal Alpine image for the final product.
 # =========================================================================
 FROM alpine:latest
 
@@ -43,9 +39,17 @@ RUN apk add --no-cache \
 # Copy the compiled 'usque' binary from the builder stage
 COPY --from=builder /usque /usr/local/bin/usque
 
-# Download and install the 'warp' optimization tool from the GitLab source
+# Download and install the 'warp' optimization tool
 RUN curl -L -o /usr/local/bin/warp "https://gitlab.com/Misaka-blog/warp-script/-/raw/main/files/warp-yxip/warp-linux-${TARGETARCH}" && \
     chmod +x /usr/local/bin/warp
+
+# =========================================================================
+#  FIX: Install wgcf directly into the image during build
+# =========================================================================
+ARG WGCF_VERSION=v2.2.19
+RUN curl -fL -o /usr/local/bin/wgcf "https://github.com/ViRb3/wgcf/releases/download/${WGCF_VERSION}/wgcf_${WGCF_VERSION#v}_linux_${TARGETARCH}" && \
+    chmod +x /usr/local/bin/wgcf
+# =========================================================================
 
 # Copy our core run script into the final image
 COPY run.sh /usr/local/bin/run.sh
