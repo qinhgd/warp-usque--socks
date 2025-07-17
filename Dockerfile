@@ -1,35 +1,10 @@
-# =========================================================================
-# Stage 1: The Builder
-# Use a Debian-based Go image for a more stable build environment.
-# This stage will be discarded after the build is complete.
-# =========================================================================
-FROM golang:1.23-bullseye AS builder
-
-# Install curl and tar to download and extract the source code archive.
-RUN apt-get update && apt-get install -y --no-install-recommends curl tar
-
-# Set the working directory
-WORKDIR /src
-
-# Download the source code as a tarball to avoid git clone issues in CI.
-RUN curl -fL -o usque.tar.gz https://github.com/Diniboy1123/usque/archive/refs/heads/main.tar.gz && \
-    tar -xzf usque.tar.gz --strip-components=1 && \
-    rm usque.tar.gz
-
-# Build the usque binary.
-RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /usque .
-
-
-# =========================================================================
-# Stage 2: The Final Image
-# Use a minimal Alpine image for the final product.
-# =========================================================================
+# 使用一个轻量级的 Alpine 镜像
 FROM alpine:latest
 
-# Set the platform argument, which is needed for downloading the 'warp' tool
+# 设置平台架构参数，用于下载正确的二进制文件
 ARG TARGETARCH
 
-# Install runtime dependencies, including iptables for wg-quick
+# 安装所有运行时所需的依赖
 RUN apk add --no-cache \
     curl \
     gawk \
@@ -38,28 +13,34 @@ RUN apk add --no-cache \
     iptables \
     ip6tables
 
-# Patch wg-quick to prevent it from modifying read-only sysctl values.
-# This avoids the need for --privileged or --sysctl flags during runtime.
+# 关键修复：修补 wg-quick 脚本，以避免在 Docker 中因权限问题出错
 RUN sed -i 's/sysctl -q net.ipv4.conf.all.src_valid_mark=1/#&/' /usr/bin/wg-quick
 
-# Copy the compiled 'usque' binary from the builder stage
-COPY --from=builder /usque /usr/local/bin/usque
+# =========================================================================
+#  安装 Usque (从 v1.4.1 Release 下载预编译版)
+# =========================================================================
+ARG USQUE_VERSION=v1.4.1
+RUN curl -fL -o /usr/local/bin/usque "https://github.com/Diniboy1123/usque/releases/download/${USQUE_VERSION}/usque-linux-${TARGETARCH}" && \
+    chmod +x /usr/local/bin/usque
 
-# Download and install the 'warp' optimization tool
+# =========================================================================
+#  安装其他工具
+# =========================================================================
+# 下载并安装 'warp' IP 优选工具
 RUN curl -L -o /usr/local/bin/warp "https://gitlab.com/Misaka-blog/warp-script/-/raw/main/files/warp-yxip/warp-linux-${TARGETARCH}" && \
     chmod +x /usr/local/bin/warp
 
-# Install wgcf directly into the image during build
+# 下载并安装 'wgcf' 账户管理工具
 ARG WGCF_VERSION=v2.2.19
 RUN curl -fL -o /usr/local/bin/wgcf "https://github.com/ViRb3/wgcf/releases/download/${WGCF_VERSION}/wgcf_${WGCF_VERSION#v}_linux_${TARGETARCH}" && \
     chmod +x /usr/local/bin/wgcf
 
-# Copy our core run script into the final image
+# 复制核心运行脚本
 COPY run.sh /usr/local/bin/run.sh
 RUN chmod +x /usr/local/bin/run.sh
 
-# Create the working directory for wgcf and usque configs
+# 创建工作目录
 WORKDIR /wgcf
 
-# Set the container's entrypoint to our run script
+# 设置容器入口点
 ENTRYPOINT ["/usr/local/bin/run.sh"]
