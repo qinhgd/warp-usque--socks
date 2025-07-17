@@ -76,18 +76,22 @@ _startProxyServices() {
         AUTH_MSG="已启用"
     fi
 
-    if ! pgrep -f "usque.*socks" > /dev/null; then
+    # --- 启动 SOCKS5 代理 ---
+    if ! pgrep -f "usque socks" > /dev/null; then
         yellow "Starting Usque SOCKS5 proxy service..."
         local SOCKS5_PORT="${SOCKS5_PORT:-${PORT:-1080}}"
-        local SOCKS_COMMAND="usque ${AUTH_COMMAND} -l ${HOST_IP}:${SOCKS5_PORT} -b wgcf socks"
+        # FIX: Moved the 'socks' command to be before its flags
+        local SOCKS_COMMAND="usque socks ${AUTH_COMMAND} -l ${HOST_IP}:${SOCKS5_PORT} -b wgcf"
         green "✅ SOCKS5 代理配置: ${HOST_IP}:${SOCKS5_PORT} | 认证: ${AUTH_MSG}"
         eval "${SOCKS_COMMAND} &"
     fi
 
+    # --- (可选) 启动 HTTP 代理 ---
     if [ -n "$HTTP_PORT" ]; then
-        if ! pgrep -f "usque.*http-proxy" > /dev/null; then
+        if ! pgrep -f "usque http-proxy" > /dev/null; then
             yellow "Starting Usque HTTP proxy service..."
-            local HTTP_COMMAND="usque ${AUTH_COMMAND} -l ${HOST_IP}:${HTTP_PORT} -b wgcf http-proxy"
+            # FIX: Moved the 'http-proxy' command to be before its flags
+            local HTTP_COMMAND="usque http-proxy ${AUTH_COMMAND} -l ${HOST_IP}:${HTTP_PORT} -b wgcf"
             green "✅ HTTP 代理配置: ${HOST_IP}:${HTTP_PORT} | 认证: ${AUTH_MSG}"
             eval "${HTTP_COMMAND} &"
         fi
