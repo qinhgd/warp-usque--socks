@@ -73,8 +73,8 @@ _startProxyServices() {
     if ! pgrep -f "usque socks" > /dev/null; then
         yellow "Starting Usque SOCKS5 proxy service..."
         local SOCKS5_PORT="${SOCKS5_PORT:-${PORT:-1080}}"
-        # FIX: 移除 -i wgcf 参数，让系统路由自动处理
-        local SOCKS_COMMAND="usque socks -b ${HOST_IP} -p ${SOCKS5_PORT}"
+        # FIX: 显式设置一个较小的 MTU (1240) 以避免 "DATAGRAM frame too large" 错误
+        local SOCKS_COMMAND="usque socks -b ${HOST_IP} -p ${SOCKS5_PORT} -m 1240"
         green "✅ SOCKS5 代理配置: ${HOST_IP}:${SOCKS5_PORT} | 认证: 已禁用"
         eval "${SOCKS_COMMAND} &"
     fi
@@ -83,8 +83,8 @@ _startProxyServices() {
     if [ -n "$HTTP_PORT" ]; then
         if ! pgrep -f "usque http-proxy" > /dev/null; then
             yellow "Starting Usque HTTP proxy service..."
-            # FIX: 移除 -i wgcf 参数，让系统路由自动处理
-            local HTTP_COMMAND="usque http-proxy -b ${HOST_IP} -p ${HTTP_PORT}"
+            # FIX: 显式设置一个较小的 MTU (1240) 以避免 "DATAGRAM frame too large" 错误
+            local HTTP_COMMAND="usque http-proxy -b ${HOST_IP} -p ${HTTP_PORT} -m 1240"
             green "✅ HTTP 代理配置: ${HOST_IP}:${HTTP_PORT} | 认证: 已禁用"
             eval "${HTTP_COMMAND} &"
         fi
