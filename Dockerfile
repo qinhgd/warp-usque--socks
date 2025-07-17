@@ -21,8 +21,8 @@ RUN sed -i 's/sysctl -q net.ipv4.conf.all.src_valid_mark=1/#&/' /usr/bin/wg-quic
 # =========================================================================
 #  安装 Usque (从 v1.4.1 Release 下载预编译的 .zip 文件)
 # =========================================================================
-ARG USQUE_VERSION=v1.4.1
-# FIX: 使用正确的文件名格式 (usque_VERSION_linux_ARCH.zip) 并添加解压步骤
+# FIX: Corrected the version variable and the URL format to match the release assets
+ARG USQUE_VERSION=1.4.1
 RUN curl -fL -o usque.zip "https://github.com/Diniboy1123/usque/releases/download/v${USQUE_VERSION}/usque_${USQUE_VERSION}_linux_${TARGETARCH}.zip" && \
     unzip usque.zip && \
     mv usque /usr/local/bin/usque && \
