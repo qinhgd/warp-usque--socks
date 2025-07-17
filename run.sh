@@ -133,11 +133,11 @@ _check_connection() {
 
 runwgcf() {
     trap '_downwgcf' ERR TERM INT
+    
     yellow "服务初始化..."
     
     if [ ! -f "$CONFIG_FILE" ]; then
         yellow "Usque 配置文件 (config.json) 未找到，开始自动注册..."
-        # FIX: Changed '--register' to the correct command 'register'
         if echo 'y' | usque register; then
             green "✅ Usque 自动注册成功！配置文件已保存至 $CONFIG_FILE"
         else
