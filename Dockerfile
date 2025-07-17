@@ -5,14 +5,15 @@
 # =========================================================================
 FROM golang:1.22-bullseye AS builder
 
-# Install git using apt-get
-RUN apt-get update && apt-get install -y --no-install-recommends git
+# Install curl and tar to download and extract the source code archive.
+RUN apt-get update && apt-get install -y --no-install-recommends curl tar
 
 # Set the working directory
 WORKDIR /src
 
-# Clone the usque repository from the community fork
-RUN git clone https://github.com/eza-community/usque.git .
+# FIX: Download the source code as a tarball to avoid git clone issues in CI.
+# The tar command extracts the archive and strips the top-level directory.
+RUN curl -L https://github.com/eza-community/usque/archive/refs/heads/master.tar.gz | tar -xz --strip-components=1
 
 # Build the usque binary.
 # CGO_ENABLED=0 creates a static binary that can run on any Linux, including Alpine.
