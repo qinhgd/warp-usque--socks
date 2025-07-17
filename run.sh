@@ -68,31 +68,24 @@ update_wg_endpoint() {
 
 _startProxyServices() {
     local HOST_IP="${HOST:-0.0.0.0}"
-    local AUTH_COMMAND=""
-    local AUTH_MSG="无"
 
-    if [ -n "$USER" ] && [ -n "$PASSWORD" ]; then
-        AUTH_COMMAND="-u ${USER} -p ${PASSWORD}"
-        AUTH_MSG="已启用"
-    fi
-
-    # --- 启动 SOCKS5 代理 ---
+    # --- 启动 SOCKS5 代理 (无认证) ---
     if ! pgrep -f "usque socks" > /dev/null; then
         yellow "Starting Usque SOCKS5 proxy service..."
         local SOCKS5_PORT="${SOCKS5_PORT:-${PORT:-1080}}"
-        # FIX: Moved the 'socks' command to be before its flags
-        local SOCKS_COMMAND="usque socks ${AUTH_COMMAND} -l ${HOST_IP}:${SOCKS5_PORT} -b wgcf"
-        green "✅ SOCKS5 代理配置: ${HOST_IP}:${SOCKS5_PORT} | 认证: ${AUTH_MSG}"
+        # 移除了认证参数
+        local SOCKS_COMMAND="usque socks -l ${HOST_IP}:${SOCKS5_PORT} -b wgcf"
+        green "✅ SOCKS5 代理配置: ${HOST_IP}:${SOCKS5_PORT} | 认证: 已禁用"
         eval "${SOCKS_COMMAND} &"
     fi
 
-    # --- (可选) 启动 HTTP 代理 ---
+    # --- (可选) 启动 HTTP 代理 (无认证) ---
     if [ -n "$HTTP_PORT" ]; then
         if ! pgrep -f "usque http-proxy" > /dev/null; then
             yellow "Starting Usque HTTP proxy service..."
-            # FIX: Moved the 'http-proxy' command to be before its flags
-            local HTTP_COMMAND="usque http-proxy ${AUTH_COMMAND} -l ${HOST_IP}:${HTTP_PORT} -b wgcf"
-            green "✅ HTTP 代理配置: ${HOST_IP}:${HTTP_PORT} | 认证: ${AUTH_MSG}"
+            # 移除了认证参数
+            local HTTP_COMMAND="usque http-proxy -l ${HOST_IP}:${HTTP_PORT} -b wgcf"
+            green "✅ HTTP 代理配置: ${HOST_IP}:${HTTP_PORT} | 认证: 已禁用"
             eval "${HTTP_COMMAND} &"
         fi
     fi
