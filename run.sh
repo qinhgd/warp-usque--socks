@@ -99,7 +99,7 @@ _startProxyServices() {
     if [ -n "$HTTP_PORT" ]; then
         if ! pgrep -f "usque.*http" > /dev/null; then
             yellow "Starting Usque HTTP proxy service..."
-            local HTTP_COMMAND="usque ${AUTH_COMMAND} -l ${HOST_IP}:${HTTP_PORT} -b wgcf http"
+            local HTTP_COMMAND="usque ${AUTH_COMMAND} -l ${HOST_IP}:${HTTP_PORT} -b wgcf http-proxy"
             
             green "✅ HTTP 代理配置如下:"
             echo "   - 监听地址: ${HOST_IP}:${HTTP_PORT}"
@@ -137,7 +137,8 @@ runwgcf() {
     
     if [ ! -f "$CONFIG_FILE" ]; then
         yellow "Usque 配置文件 (config.json) 未找到，开始自动注册..."
-        if echo 'y' | usque --register; then
+        # FIX: Changed '--register' to the correct command 'register'
+        if echo 'y' | usque register; then
             green "✅ Usque 自动注册成功！配置文件已保存至 $CONFIG_FILE"
         else
             red "❌ Usque 自动注册失败，请检查日志。脚本将退出。"
