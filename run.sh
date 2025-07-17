@@ -29,12 +29,12 @@ yellow() { echo -e "\033[33m\033[01m$1\033[0m"; }
 # ==============================================================================
 
 run_ip_selection() {
-    local ip_version_flag=""
-    [ "$1" = "-6" ] && ip_version_flag="-ipv6"
+    local ip_version_flag=""; [ "$1" = "-6" ] && ip_version_flag="-ipv6"
     green "🚀 开始优选 WARP Endpoint IP..."
     /usr/local/bin/warp -t "$WARP_CONNECT_TIMEOUT" ${ip_version_flag} > /dev/null
     if [ -f "result.csv" ]; then
         green "✅ 优选完成，正在处理结果..."
+        # 放宽筛选条件，只要能通就行
         awk -F, '$3!="timeout ms" {print $1}' result.csv | sed 's/[[:space:]]//g' | head -n "$BEST_IP_COUNT" > "$BEST_IP_FILE"
         if [ -s "$BEST_IP_FILE" ]; then
             green "✅ 已生成包含 $(wc -l < "$BEST_IP_FILE") 个IP的优选列表。"
@@ -66,55 +66,34 @@ update_wg_endpoint() {
     sed -i "s/^Endpoint = .*$/Endpoint = $random_ip/" /etc/wireguard/wgcf.conf
 }
 
-# 启动代理服务 (SOCKS5 和 HTTP)
 _startProxyServices() {
     local HOST_IP="${HOST:-0.0.0.0}"
     local AUTH_COMMAND=""
     local AUTH_MSG="无"
 
-    # 准备认证参数
     if [ -n "$USER" ] && [ -n "$PASSWORD" ]; then
         AUTH_COMMAND="-u ${USER} -p ${PASSWORD}"
         AUTH_MSG="已启用"
     fi
 
-    # --- 启动 SOCKS5 代理 ---
     if ! pgrep -f "usque.*socks" > /dev/null; then
         yellow "Starting Usque SOCKS5 proxy service..."
         local SOCKS5_PORT="${SOCKS5_PORT:-${PORT:-1080}}"
         local SOCKS_COMMAND="usque ${AUTH_COMMAND} -l ${HOST_IP}:${SOCKS5_PORT} -b wgcf socks"
-
-        green "✅ SOCKS5 代理配置如下:"
-        echo "   - 监听地址: ${HOST_IP}:${SOCKS5_PORT}"
-        echo "   - 认证状态: ${AUTH_MSG}"
-        echo "   - 出站接口: wgcf (强制所有流量通过WARP)"
-
+        green "✅ SOCKS5 代理配置: ${HOST_IP}:${SOCKS5_PORT} | 认证: ${AUTH_MSG}"
         eval "${SOCKS_COMMAND} &"
-        yellow "✅ Usque SOCKS5 服务已启动。"
-    else
-        green "✅ Usque SOCKS5 服务已在运行中。"
     fi
 
-    # --- (可选) 启动 HTTP 代理 ---
     if [ -n "$HTTP_PORT" ]; then
-        if ! pgrep -f "usque.*http" > /dev/null; then
+        if ! pgrep -f "usque.*http-proxy" > /dev/null; then
             yellow "Starting Usque HTTP proxy service..."
             local HTTP_COMMAND="usque ${AUTH_COMMAND} -l ${HOST_IP}:${HTTP_PORT} -b wgcf http-proxy"
-            
-            green "✅ HTTP 代理配置如下:"
-            echo "   - 监听地址: ${HOST_IP}:${HTTP_PORT}"
-            echo "   - 认证状态: ${AUTH_MSG}"
-            echo "   - 出站接口: wgcf (强制所有流量通过WARP)"
-
+            green "✅ HTTP 代理配置: ${HOST_IP}:${HTTP_PORT} | 认证: ${AUTH_MSG}"
             eval "${HTTP_COMMAND} &"
-            yellow "✅ Usque HTTP 服务已启动。"
-        else
-            green "✅ Usque HTTP 服务已在运行中。"
         fi
     fi
 }
 
-# 检查WARP连接状态
 _check_connection() {
     local check_url="https://www.cloudflare.com/cdn-cgi/trace"
     local curl_opts="-s -m ${HEALTH_CHECK_TIMEOUT}"
@@ -139,16 +118,23 @@ runwgcf() {
     if [ ! -f "$CONFIG_FILE" ]; then
         yellow "Usque 配置文件 (config.json) 未找到，开始自动注册..."
         if echo 'y' | usque register; then
-            green "✅ Usque 自动注册成功！配置文件已保存至 $CONFIG_FILE"
+            green "✅ Usque 自动注册成功！"
         else
-            red "❌ Usque 自动注册失败，请检查日志。脚本将退出。"
+            red "❌ Usque 自动注册失败，脚本将退出。"
             exit 1
         fi
     else
         green "✅ Usque 配置文件已存在，跳过注册。"
     fi
 
-    [ ! -e "wgcf-account.toml" ] && wgcf register --accept-tos
+    if [ ! -e "wgcf-account.toml" ]; then
+        yellow "WGCF 账户文件 (wgcf-account.toml) 未找到，开始自动注册..."
+        wgcf register --accept-tos
+        green "✅ WGCF 自动注册成功！"
+    else
+        green "✅ WGCF 账户文件已存在，跳过注册。"
+    fi
+
     [ ! -e "wgcf-profile.conf" ] && wgcf generate
     cp wgcf-profile.conf /etc/wireguard/wgcf.conf
     
